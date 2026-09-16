@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyForge AI — Modern University Module Synthesis & Study Suite</title>
+  <meta name="description" content="AI-powered university study engine. Ingest course module PDFs to generate structured notes, 8–12 slide presentations with speaker notes, 15 MCQs, concept flashcards, and 1-page last-minute cram sheets with strict source attribution.">
+  <meta name="theme-color" content="#0b0f19">
+
+  <!-- Core Stylesheets -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/slides.css">
+  <link rel="stylesheet" href="css/quiz.css">
+  <link rel="stylesheet" href="css/print.css">
+
+  <!-- PDF.js for client-side PDF ingestion -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
+  <!-- Confetti library for quiz celebration -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <a href="#" class="logo-brand" id="brand-link">
+        <div class="logo-icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>StudyForge AI</h1>
+          <span class="brand-tagline">University Academic Suite</span>
+        </div>
+      </a>
+
+      <!-- 1-Click Sample Module Quick Switcher -->
+      <div class="header-center-controls">
+        <label for="sample-module-select" class="sample-label">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+          Explore Sample Course:
+        </label>
+        <select id="sample-module-select" class="select-sample" aria-label="Select preloaded sample module">
+          <!-- Populated by JavaScript -->
+        </select>
+      </div>
+
+      <!-- Quick Actions & Session Stats -->
+      <div class="header-right-actions">
+        <button class="btn btn-secondary btn-sm" onclick="StudyForge.switchTab('tab-preview')" id="btn-view-source">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          Module Preview
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="StudyForge.triggerRevisionMode()" id="btn-quick-revision">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Revision Mode
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Student Dashboard -->
+  <main class="dashboard-container">
+    
+    <!-- Upload Area & Current Module Metadata Hub -->
+    <section class="hero-hub-grid" aria-labelledby="section-upload-title">
+      
+      <!-- Drag & Drop Upload Zone -->
+      <div class="upload-card-wrapper" id="pdf-dropzone" tabindex="0" role="button" aria-label="Upload Course Module PDF">
+        <input type="file" id="pdf-file-input" accept=".pdf,.txt" style="display: none;" aria-hidden="true">
+        <div class="upload-icon-circle">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <h2 class="upload-title" id="section-upload-title">Upload University Module PDF</h2>
+        <p class="upload-desc">Drag and drop your syllabus, lecture notes, or textbook chapter (.pdf) here, or browse files.</p>
+        <div class="upload-badges">
+          <span class="badge badge-neutral">Client-Side PDF.js Ingestion</span>
+          <span class="badge badge-accent">Ground Truth Verification</span>
+          <span class="badge badge-neutral">Instant Extraction</span>
+        </div>
+      </div>
+
+      <!-- Active Module Preview & Metrics Card -->
+      <div class="active-module-card" id="active-module-card">
+        <div>
+          <div class="mod-header-badge-row">
+            <span class="module-code-pill" id="active-module-code">CS301</span>
+            <span class="badge badge-verified">🟢 Source PDF Verified</span>
+          </div>
+          <h2 class="active-module-title" id="active-module-title">Distributed Systems & Consensus Protocols</h2>
+          <p class="active-module-dept" id="active-module-dept">Computer Science & Engineering</p>
+        </div>
+
+        <div class="module-metrics-grid">
+          <div class="metric-item">
+            <span class="metric-value" id="active-module-pages">14 Pages</span>
+            <span class="metric-label">Document Scope</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-value" id="active-module-words">4,250 Words</span>
+            <span class="metric-label">Extracted Content</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-value" id="active-module-questions">15 MCQs</span>
+            <span class="metric-label">Question Bank</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Action Trigger Hub (The 4 Primary Buttons) -->
+    <section class="action-triggers-section" aria-label="Quick Generation Actions">
+      <div class="action-triggers-grid">
+        
+        <!-- Button 1: Generate Notes -->
+        <div class="action-card-btn" id="btn-action-notes" onclick="StudyForge.triggerGenerateNotes()" role="button" tabindex="0">
+          <div class="action-card-icon icon-notes">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </div>
+          <div class="action-card-content">
+            <h3>Generate Notes</h3>
+            <p>Unit-by-unit structured breakdown</p>
+          </div>
+        </div>
+
+        <!-- Button 2: Generate PPT -->
+        <div class="action-card-btn" id="btn-action-ppt" onclick="StudyForge.triggerGeneratePPT()" role="button" tabindex="0">
+          <div class="action-card-icon icon-ppt">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          </div>
+          <div class="action-card-content">
+            <h3>Generate PPT</h3>
+            <p>8–12 slides + Speaker Notes</p>
+          </div>
+        </div>
+
+        <!-- Button 3: Generate Questions -->
+        <div class="action-card-btn" id="btn-action-questions" onclick="StudyForge.triggerGenerateQuestions()" role="button" tabindex="0">
+          <div class="action-card-icon icon-questions">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div class="action-card-content">
+            <h3>Generate Questions</h3>
+            <p>15 MCQs + Written exam rubrics</p>
+          </div>
+        </div>
+
+        <!-- Button 4: Revision Mode -->
+        <div class="action-card-btn" id="btn-action-revision" onclick="StudyForge.triggerRevisionMode()" role="button" tabindex="0">
+          <div class="action-card-icon icon-revision">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </div>
+          <div class="action-card-content">
+            <h3>Revision Mode</h3>
+            <p>1-Page Last-Minute Cheat Sheet</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="nav-tabs-wrapper" aria-label="Module Content Navigation">
+      <button class="nav-tab-btn active" data-tab="tab-notes" id="tab-nav-notes">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Structured Notes
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-slides" id="tab-nav-slides">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        PowerPoint Deck (8–12 Slides)
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-questions" id="tab-nav-questions">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        15 MCQs & Written Questions
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-definitions" id="tab-nav-definitions">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+        Definitions & Flashcards
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-revision" id="tab-nav-revision">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        1-Page Revision Sheet
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-difficulty" id="tab-nav-difficulty">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        Difficulty & Cognitive Load
+      </button>
+
+      <button class="nav-tab-btn" data-tab="tab-preview" id="tab-nav-preview">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        Module Preview & Source
+      </button>
+    </nav>
+
+    <!-- ==================== TAB CONTENT PANES ==================== -->
+
+    <!-- TAB 1: Structured Module Notes -->
+    <div class="tab-pane active" id="tab-notes" role="tabpanel">
+      <div id="notes-container"></div>
+    </div>
+
+    <!-- TAB 2: PowerPoint Presentation Deck & Speaker Notes -->
+    <div class="tab-pane" id="tab-slides" role="tabpanel">
+      <div id="slides-container"></div>
+    </div>
+
+    <!-- TAB 3: Questions Hub (15 MCQs + Written) -->
+    <div class="tab-pane" id="tab-questions" role="tabpanel">
+      <div id="mcq-container"></div>
+      <div id="written-questions-container" class="mt-8"></div>
+    </div>
+
+    <!-- TAB 4: Definitions & Flashcards -->
+    <div class="tab-pane" id="tab-definitions" role="tabpanel">
+      <div id="flashcard-container"></div>
+      <div id="glossary-list-container" class="mt-8"></div>
+    </div>
+
+    <!-- TAB 5: 1-Page Last-Minute Revision Sheet -->
+    <div class="tab-pane" id="tab-revision" role="tabpanel">
+      <div id="revision-container"></div>
+    </div>
+
+    <!-- TAB 6: Topic-Wise Difficulty Levels -->
+    <div class="tab-pane" id="tab-difficulty" role="tabpanel">
+      <div id="difficulty-container"></div>
+    </div>
+
+    <!-- TAB 7: Module Preview & Source Excerpt -->
+    <div class="tab-pane" id="tab-preview" role="tabpanel">
+      <div id="module-preview-content"></div>
+    </div>
+
+  </main>
+
+  <!-- Application Scripts -->
+  <script src="js/sample-modules.js"></script>
+  <script src="js/pdf-parser.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/slides-engine.js"></script>
+  <script src="js/quiz-engine.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
